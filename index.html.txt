@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarberApp - Glass Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            /* Fondo colorido animado */
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Efecto Glass (Vidrio) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .glass-input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .glass-input:focus {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+        
+        /* Estilos para el Select */
+        select.glass-input option {
+            background-color: #1f2937; /* Gris oscuro para las opciones */
+            color: white;
+        }
+
+        /* Botones de Días */
+        .day-btn { transition: all 0.2s ease; }
+        .day-btn.active {
+            background: white;
+            color: #e73c7e; /* Color rosado del tema */
+            font-weight: 800;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        /* Botones de Control (+/-) */
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: all 0.1s;
+            user-select: none; /* Evita seleccionar texto al mantener apretado */
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+
+        /* Toggle */
+        .peer:checked ~ .peer-checked\:bg-glass-accent { background-color: rgba(255, 255, 255, 0.9); }
+        .peer:checked ~ .peer-checked\:translate-x-full { transform: translateX(100%); }
+
+        /* Animación suave */
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Ocultar flechas del input number estándar */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="min-h-full p-4 md:p-8 text-white selection:bg-pink-500 selection:text-white">
+
+    <div class="max-w-3xl mx-auto space-y-8 pb-16">
+        
+        <!-- Encabezado -->
+        <header class="text-center space-y-2 pt-6">
+            <h1 class="text-5xl font-black tracking-tight drop-shadow-md">Barber<span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">App</span></h1>
+            <p class="text-white/80 font-medium">Calculadora de Metas</p>
+            
+            <!-- Indicador de Guardado -->
+            <div id="saveIndicator" class="opacity-0 transition-opacity duration-300 text-xs font-bold text-white/90 bg-black/20 inline-flex items-center gap-1 px-3 py-1 rounded-full mt-2 backdrop-blur-sm">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Guardado
+            </div>
+        </header>
+
+        <!-- 1. Configuración Principal -->
+        <section class="glass-panel rounded-3xl p-6 md:p-8 space-y-8">
+            <div class="flex items-center gap-3 border-b border-white/10 pb-4 mb-4">
+                <span class="bg-white/20 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">1</span>
+                <h2 class="text-xl font-bold text-white">Configuración</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                
+                <!-- SELECCIÓN DE PRECIO DE REFERENCIA -->
+                <div class="space-y-3">
+                    <label class="text-sm font-bold text-white/70 uppercase tracking-wider">Usar precio de referencia:</label>
+                    
+                    <!-- Selector con Data-Name para los textos -->
+                    <select id="servicioSelector" class="glass-input w-full rounded-xl p-3 font-medium outline-none cursor-pointer">
+                        <option value="12000" data-name="Cortes" selected>Corte ($12.000)</option>
+                        <option value="15000" data-name="Cortes + Barba">Corte + Barba ($15.000)</option>
+                        <option value="8000" data-name="Barbas">Barba ($8.000)</option>
+                        <option value="2000" data-name="Diseños">Diseños (desde $2.000)</option>
+                    </select>
+
+                    <!-- Input numérico (se actualiza solo o se edita) -->
+                    <div class="relative group">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-xl font-light">$</span>
+                        <input type="number" id="precioReferencia" class="save-input glass-input w-full rounded-2xl pl-8 p-4 text-2xl font-bold outline-none transition-all placeholder-white/20" value="12000">
+                    </div>
+                    <p class="text-xs text-white/50">Tu meta se dividirá por este valor para saber cuántos trabajos necesitás.</p>
+                </div>
+
+                <!-- Meta Líquida -->
+                <div class="space-y-3">
+                    <label class="text-sm font-bold text-white/70 uppercase tracking-wider">Tu Ganancia Objetivo (55%)</label>
+                    <div class="relative group">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-xl font-light">$</span>
+                        <input type="number" id="metaLiquida" class="save-input glass-input w-full rounded-2xl pl-8 p-4 text-2xl font-bold outline-none transition-all placeholder-white/20" placeholder="Ej: 200000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selector de Días -->
+            <div class="space-y-4 pt-4">
+                <label class="text-sm font-bold text-white/70 uppercase tracking-wider">Días de Trabajo</label>
+                <div class="flex flex-wrap justify-between gap-2" id="daySelectorContainer">
+                    <button type="button" data-day="0" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">L</button>
+                    <button type="button" data-day="1" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">M</button>
+                    <button type="button" data-day="2" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">M</button>
+                    <button type="button" data-day="3" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">J</button>
+                    <button type="button" data-day="4" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">V</button>
+                    <button type="button" data-day="5" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">S</button>
+                    <button type="button" data-day="6" class="day-btn w-11 h-11 rounded-xl glass-input font-bold flex items-center justify-center hover:bg-white/10">D</button>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-2">
+                <button id="calcularBtn" class="flex-1 bg-white text-pink-600 hover:bg-white/90 font-extrabold py-4 px-6 rounded-2xl text-lg shadow-lg shadow-black/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    Calcular Plan
+                </button>
+                <button id="resetBtn" class="sm:w-auto glass-input hover:bg-white/10 text-white font-bold py-4 px-6 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Reiniciar Semana
+                </button>
+            </div>
+        </section>
+
+        <!-- Error Msg -->
+        <div id="error" class="hidden fade-in bg-red-500/80 backdrop-blur-md border border-white/20 text-white p-4 rounded-2xl text-center font-bold shadow-lg">
+            ⚠️ Ingresá una Meta ($) y seleccioná al menos un día para empezar.
+        </div>
+
+        <!-- 2. Tu Plan (Resultado) -->
+        <section id="resultado" class="hidden fade-in space-y-6">
+            
+            <!-- Objetivo Principal Card -->
+            <div class="glass-panel rounded-3xl p-8 text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
+                <h3 class="text-white/60 text-lg mb-2 font-medium">Objetivo Diario de Facturación</h3>
+                <p class="text-5xl md:text-6xl font-black text-white mb-6 drop-shadow-lg" id="resMetaDiaria">$0</p>
+                
+                <div class="inline-flex items-center gap-4 bg-black/20 p-2 pr-6 rounded-full border border-white/10 backdrop-blur-sm">
+                    <div class="bg-white text-pink-600 w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shadow-lg" id="resCortesPorDia">0</div>
+                    <div class="text-left">
+                        <!-- TEXTO DINÁMICO AQUÍ -->
+                        <p id="lblServicioMeta" class="text-sm text-white font-bold leading-none">Cortes</p>
+                        <p class="text-xs text-white/60 leading-none mt-1">por día aprox.</p>
+                    </div>
+                </div>
+
+                <!-- Aclaración Ganancia Real -->
+                <div class="mt-8 pt-6 border-t border-white/10 text-sm">
+                    <p class="text-white/80">
+                        *Si cumplís esa cantidad exacta de servicios, tu ganancia real será:
+                    </p>
+                    <div class="flex items-center justify-center gap-2 mt-1">
+                        <span id="resGananciaProyectada" class="text-2xl font-bold text-white">$0</span>
+                        <span id="resDiferenciaGanancia" class="bg-green-500/20 text-green-300 px-2 py-0.5 rounded text-xs font-bold border border-green-500/30">+ $0 extra</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards Detalles -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-panel p-5 rounded-2xl">
+                    <p class="text-xs text-white/50 uppercase font-bold tracking-wider mb-1">Meta Original (55%)</p>
+                    <p class="text-2xl font-bold text-white" id="resMetaLiquida">$0</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl">
+                    <p class="text-xs text-white/50 uppercase font-bold tracking-wider mb-1">Facturación Total</p>
+                    <p class="text-xl font-bold text-white" id="resTotalFacturar">$0</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl">
+                    <p class="text-xs text-white/50 uppercase font-bold tracking-wider mb-1">Comisión (45%)</p>
+                    <p class="text-xl font-bold text-white" id="resComision">$0</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Seguimiento Diario -->
+        <section id="seguimiento" class="hidden fade-in glass-panel rounded-3xl p-6 md:p-8">
+            <div class="flex items-center gap-3 border-b border-white/10 pb-4 mb-6">
+                <span class="bg-white/20 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">2</span>
+                <h2 class="text-xl font-bold text-white">Seguimiento Real</h2>
+            </div>
+            
+            <!-- Contenedor dinámico de Inputs -->
+            <div id="inputsDiasContainer" class="grid grid-cols-1 gap-6 mb-8">
+                <!-- Se llena con JS y ahora tiene botones de control -->
+            </div>
+
+            <!-- Totales Real Time -->
+            <div class="bg-black/20 rounded-2xl p-6 border border-white/5 space-y-6 backdrop-blur-sm">
+                <!-- Sumas -->
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pb-6 border-b border-white/10">
+                    <div class="text-center sm:text-left">
+                        <p class="text-xs text-white/50 uppercase font-bold">Total Facturado</p>
+                        <p class="text-3xl font-bold text-white" id="resTotalReal">$0</p>
+                    </div>
+                    <div class="text-center sm:text-right">
+                        <p class="text-xs text-green-300 uppercase font-bold">Tu Ganancia Líquida</p>
+                        <p class="text-3xl font-bold text-green-400 drop-shadow-sm" id="resGananciaReal">$0</p>
+                    </div>
+                </div>
+
+                <!-- Estado de la Meta -->
+                <div id="estadoMetaContainer">
+                    <!-- Estado: Faltante -->
+                    <div id="resFaltanteWrapper" class="hidden text-center space-y-4">
+                        <div>
+                            <p class="text-sm text-white/70">Te falta para el objetivo (Ganancia):</p>
+                            <p class="text-4xl font-bold text-white" id="resFaltante">$0</p>
+                        </div>
+                        
+                        <div id="cortesFaltantesWrapper" class="inline-block bg-white/10 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
+                            <span class="text-sm font-medium">
+                                Equivale a facturar 
+                                <span id="resCortesFaltantes" class="font-bold text-xl mx-1 text-white">0</span> 
+                                <!-- TEXTO DINÁMICO AQUÍ -->
+                                <span id="lblServicioFaltante">Cortes</span>
+                                más
+                            </span>
+                        </div>
+                        
+                        <div id="promedioFaltanteWrapper" class="pt-2">
+                             <p class="text-xs text-white/60">
+                                Necesitás <span class="text-white font-bold underline">facturar</span> <span id="resPromedioFaltante" class="text-white font-bold">$0</span> en cada día restante.
+                                <!-- TEXTO DINÁMICO AQUÍ -->
+                                <span id="resPromedioCortesWrapper" class="block mt-1 text-white/80">(aprox. <span id="resPromedioCortes" class="font-bold text-white">0</span> <span id="lblServicioPromedio">Cortes</span> diarios)</span>
+                             </p>
+                        </div>
+                    </div>
+
+                    <!-- Estado: Éxito -->
+                    <div id="mensajeExito" class="hidden text-center py-4">
+                        <div class="inline-flex p-4 bg-green-500/20 rounded-full mb-4 border border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
+                            <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mb-1">¡META LOGRADA! 🎉</h3>
+                        <p class="text-white/80">Extra generado: <span id="resExtra" class="font-bold text-white">$0</span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Guía Rápida (Toggle) -->
+        <section class="glass-panel rounded-2xl overflow-hidden">
+            <label for="toggleGuia" class="flex justify-between items-center p-6 cursor-pointer hover:bg-white/5 transition-colors">
+                <div class="flex items-center gap-3">
+                    <span class="bg-white/20 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">?</span>
+                    <h2 class="text-lg font-bold text-white">Ideas para Crecer</h2>
+                </div>
+                <div class="relative">
+                    <input type="checkbox" id="toggleGuia" class="peer sr-only">
+                    <div class="w-11 h-6 bg-black/30 rounded-full peer peer-focus:ring-2 peer-focus:ring-white/50 transition-all"></div>
+                    <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 peer-checked:translate-x-full peer-checked:bg-glass-accent"></div>
+                </div>
+            </label>
+
+            <div id="contenidoGuia" class="max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                <div class="p-6 border-t border-white/10 space-y-6 text-white/80 text-sm leading-relaxed">
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white/5 p-4 rounded-xl">
+                            <h3 class="text-white font-bold mb-3 uppercase text-xs tracking-wider opacity-70">Ticket Promedio</h3>
+                            <ul class="space-y-2">
+                                <li class="flex gap-2">✨ Ofrecé combos (Corte + Barba).</li>
+                                <li class="flex gap-2">✨ Vendé productos (Cera, Aceite).</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white/5 p-4 rounded-xl">
+                            <h3 class="text-white font-bold mb-3 uppercase text-xs tracking-wider opacity-70">Frecuencia</h3>
+                            <ul class="space-y-2">
+                                <li class="flex gap-2">📅 Re-agendá al terminar.</li>
+                                <li class="flex gap-2">📱 Mandá recordatorios.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white/5 p-4 rounded-xl">
+                            <h3 class="text-white font-bold mb-3 uppercase text-xs tracking-wider opacity-70">Nuevos Clientes</h3>
+                            <ul class="space-y-2">
+                                <li class="flex gap-2">📍 Google Maps activo.</li>
+                                <li class="flex gap-2">📸 Reels de "Antes y Después".</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <p class="text-center text-white/30 text-xs mt-8 font-medium">Tus datos se guardan automáticamente.</p>
+
+    </div>
+
+    <!-- LÓGICA DE LA APLICACIÓN -->
+    <script>
+        // --- 1. CONFIGURACIÓN Y VARIABLES ---
+        
+        let metaLiquidaGoal = 0;
+        let precioCorteGoal = 0;
+        let diasTrabajoGoal = 0;
+        let serviceName = 'Cortes'; // NUEVO: Nombre del servicio seleccionado
+        const tuPorcentaje = 0.55; 
+        const comisionPorcentaje = 0.45; 
+        
+        const daysNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        let selectedDays = []; 
+
+        const staticIdsToSave = ['precioReferencia', 'metaLiquida'];
+
+        // --- 2. FUNCIONES UTILITARIAS ---
+
+        const formatCurrency = (num) => {
+            if (isNaN(num) || num === null) return '$0';
+            return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(num);
+        };
+
+        const showSaveIndicator = () => {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.remove('opacity-0');
+            setTimeout(() => {
+                indicator.classList.add('opacity-0');
+            }, 1500);
+        };
+
+        // --- 3. GESTIÓN DE DATOS (Storage) ---
+
+        function saveData(event) {
+            // Manejamos input normal o evento custom
+            const target = event.target || event;
+            if (target.id) {
+                localStorage.setItem(target.id, target.value);
+                showSaveIndicator();
+            }
+        }
+
+        function loadAllData() {
+            staticIdsToSave.forEach(id => {
+                const element = document.getElementById(id);
+                const savedVal = localStorage.getItem(id);
+                if (element && savedVal) {
+                    element.value = savedVal;
+                }
+            });
+            
+            const savedDays = localStorage.getItem('selectedDaysStorage');
+            if (savedDays) {
+                selectedDays = JSON.parse(savedDays);
+            } else {
+                selectedDays = [1, 2, 3, 4, 5]; 
+                localStorage.setItem('selectedDaysStorage', JSON.stringify(selectedDays));
+            }
+            updateDayButtonsVisuals();
+            
+            // Cargar nombre del servicio si existe
+            const savedServiceName = localStorage.getItem('serviceName');
+            if(savedServiceName) {
+                serviceName = savedServiceName;
+                // Intentar sincronizar el select si es posible (solo visual)
+                const options = document.getElementById('servicioSelector').options;
+                for(let i=0; i<options.length; i++) {
+                    if(options[i].getAttribute('data-name') === serviceName) {
+                        document.getElementById('servicioSelector').selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            const metaVal = parseFloat(document.getElementById('metaLiquida').value);
+            const precioRefVal = parseFloat(document.getElementById('precioReferencia').value);
+
+            if (metaVal > 0 && precioRefVal > 0 && selectedDays.length > 0) {
+                performCalculation();
+            }
+        }
+        
+        function saveSelectedDays() {
+            localStorage.setItem('selectedDaysStorage', JSON.stringify(selectedDays));
+            showSaveIndicator();
+        }
+
+        function updateDayButtonsVisuals() {
+            const buttons = document.querySelectorAll('.day-btn');
+            buttons.forEach(btn => {
+                const dayIndex = parseInt(btn.getAttribute('data-day'));
+                if (selectedDays.includes(dayIndex)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+        
+        // Función para actualizar todos los textos con el nombre del servicio
+        function updateServiceLabels() {
+            const labels = [
+                document.getElementById('lblServicioMeta'),
+                document.getElementById('lblServicioFaltante'),
+                document.getElementById('lblServicioPromedio')
+            ];
+            
+            labels.forEach(lbl => {
+                if(lbl) lbl.textContent = serviceName;
+            });
+        }
+
+        // --- 4. INTERFAZ DINÁMICA ---
+
+        function generarInputsDias() {
+            const container = document.getElementById('inputsDiasContainer');
+            container.innerHTML = ''; 
+            
+            const sortedDays = [...selectedDays].sort((a, b) => a - b);
+
+            if (sortedDays.length === 0) return;
+
+            sortedDays.forEach(dayIndex => {
+                const dayName = daysNames[dayIndex];
+                const inputId = `dia_${dayName}`; 
+                
+                // Contenedor principal de la fila
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex flex-col space-y-1';
+                
+                const label = document.createElement('label');
+                label.setAttribute('for', inputId);
+                label.className = 'block text-xs font-bold text-white/60 ml-1';
+                label.textContent = dayName.toUpperCase();
+                
+                // Contenedor Input + Botones
+                const controlsContainer = document.createElement('div');
+                controlsContainer.className = 'flex items-center gap-2';
+
+                // Botón Menos
+                const btnMinus = document.createElement('button');
+                btnMinus.className = 'control-btn w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold';
+                btnMinus.innerHTML = '&minus;';
+                
+                // Botón Más
+                const btnPlus = document.createElement('button');
+                btnPlus.className = 'control-btn w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold';
+                btnPlus.innerHTML = '&plus;';
+                
+                // Input
+                const inputContainer = document.createElement('div');
+                inputContainer.className = 'relative flex-1';
+                
+                const symbol = document.createElement('span');
+                symbol.className = 'absolute left-3 top-1/2 -translate-y-1/2 text-white/40';
+                symbol.textContent = '$';
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.id = inputId;
+                input.className = 'dia-input glass-input w-full rounded-xl pl-7 p-3 outline-none font-bold text-center transition-all';
+                input.placeholder = "0";
+                
+                const savedVal = localStorage.getItem(inputId);
+                if (savedVal) {
+                    input.value = savedVal;
+                }
+
+                input.addEventListener('input', (e) => {
+                    saveData(e);
+                    actualizarSeguimiento();
+                });
+                
+                // Asignar lógica de Long Press a los botones
+                setupLongPress(btnMinus, input, -500);
+                setupLongPress(btnPlus, input, 500);
+
+                inputContainer.appendChild(symbol);
+                inputContainer.appendChild(input);
+                
+                controlsContainer.appendChild(btnMinus);
+                controlsContainer.appendChild(inputContainer);
+                controlsContainer.appendChild(btnPlus);
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(controlsContainer);
+                container.appendChild(wrapper);
+            });
+        }
+        
+        // --- Lógica de Long Press (Mantener presionado) ---
+        function setupLongPress(button, input, step) {
+            let interval;
+            let timeout;
+            
+            const modifyValue = () => {
+                let current = parseFloat(input.value) || 0;
+                current += step;
+                if(current < 0) current = 0;
+                input.value = current;
+                // Disparar eventos manualmente
+                input.dispatchEvent(new Event('input'));
+            };
+
+            const start = (e) => {
+                if(e.type === 'touchstart') e.preventDefault();
+                
+                modifyValue(); 
+                
+                timeout = setTimeout(() => {
+                    // Carga rápida (Turbo) - 40ms
+                    interval = setInterval(modifyValue, 40); 
+                }, 300); 
+            };
+
+            const stop = () => {
+                clearTimeout(timeout);
+                clearInterval(interval);
+            };
+
+            // Eventos Mouse
+            button.addEventListener('mousedown', start);
+            button.addEventListener('mouseup', stop);
+            button.addEventListener('mouseleave', stop);
+            
+            // Eventos Touch (Móvil)
+            button.addEventListener('touchstart', start);
+            button.addEventListener('touchend', stop);
+            button.addEventListener('touchcancel', stop);
+        }
+
+        // --- 5. LÓGICA DE CÁLCULO ---
+
+        function performCalculation() {
+            const precioRef = parseFloat(document.getElementById('precioReferencia').value) || 0;
+            const metaLiquida = parseFloat(document.getElementById('metaLiquida').value) || 0;
+            const countDias = selectedDays.length;
+            
+            const errorDiv = document.getElementById('error');
+            const resultadoDiv = document.getElementById('resultado');
+            const seguimientoDiv = document.getElementById('seguimiento');
+
+            if (metaLiquida <= 0 || precioRef <= 0 || countDias <= 0) {
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+
+            metaLiquidaGoal = metaLiquida;
+            precioCorteGoal = precioRef; 
+            diasTrabajoGoal = countDias;
+
+            const totalFacturar = metaLiquida / tuPorcentaje;
+            const comisionMonto = totalFacturar * comisionPorcentaje;
+            const metaDiariaFacturar = totalFacturar / diasTrabajoGoal;
+            
+            const cortesPorDia = Math.ceil(metaDiariaFacturar / precioCorteGoal); 
+
+            const facturacionDiariaAprox = cortesPorDia * precioCorteGoal;
+            const facturacionSemanalAprox = facturacionDiariaAprox * diasTrabajoGoal;
+            const gananciaLiquidaAprox = facturacionSemanalAprox * tuPorcentaje;
+            
+            const diferencia = gananciaLiquidaAprox - metaLiquida;
+
+            document.getElementById('resMetaLiquida').textContent = formatCurrency(metaLiquida);
+            document.getElementById('resTotalFacturar').textContent = formatCurrency(totalFacturar);
+            document.getElementById('resComision').textContent = formatCurrency(comisionMonto);
+            document.getElementById('resMetaDiaria').textContent = formatCurrency(metaDiariaFacturar);
+            document.getElementById('resCortesPorDia').textContent = cortesPorDia;
+
+            document.getElementById('resGananciaProyectada').textContent = formatCurrency(gananciaLiquidaAprox);
+            
+            const diffEl = document.getElementById('resDiferenciaGanancia');
+            if(diferencia > 0) {
+                diffEl.textContent = `+ ${formatCurrency(diferencia)} extra`;
+                diffEl.classList.remove('hidden');
+            } else {
+                diffEl.textContent = 'Exacto';
+            }
+            
+            // Actualizar etiquetas de texto
+            updateServiceLabels();
+
+            resultadoDiv.classList.remove('hidden');
+            seguimientoDiv.classList.remove('hidden');
+            
+            generarInputsDias(); 
+            actualizarSeguimiento();
+        }
+
+        function actualizarSeguimiento() {
+            metaLiquidaGoal = parseFloat(document.getElementById('metaLiquida').value) || 0;
+            precioCorteGoal = parseFloat(document.getElementById('precioReferencia').value) || 0;
+            diasTrabajoGoal = selectedDays.length;
+
+            const diasInputs = document.querySelectorAll('.dia-input');
+            let totalFacturadoReal = 0;
+            let diasCargados = 0;
+
+            diasInputs.forEach(input => {
+                const val = parseFloat(input.value) || 0;
+                totalFacturadoReal += val;
+                if (val > 0) diasCargados++;
+            });
+
+            const gananciaLiquidaReal = totalFacturadoReal * tuPorcentaje;
+            const faltante = metaLiquidaGoal - gananciaLiquidaReal;
+
+            document.getElementById('resTotalReal').textContent = formatCurrency(totalFacturadoReal);
+            document.getElementById('resGananciaReal').textContent = formatCurrency(gananciaLiquidaReal);
+
+            const faltanteWrapper = document.getElementById('resFaltanteWrapper');
+            const exitoDiv = document.getElementById('mensajeExito');
+            const cortesWrapper = document.getElementById('cortesFaltantesWrapper');
+            const cortesSpan = document.getElementById('resCortesFaltantes');
+            const promedioWrapper = document.getElementById('promedioFaltanteWrapper');
+            const promedioSpan = document.getElementById('resPromedioFaltante');
+            const promedioCortesSpan = document.getElementById('resPromedioCortes');
+            
+            // Asegurarse de que las etiquetas estén actualizadas
+            updateServiceLabels();
+
+            if (faltante > 100) { 
+                exitoDiv.classList.add('hidden'); 
+                faltanteWrapper.classList.remove('hidden');
+                
+                document.getElementById('resFaltante').textContent = formatCurrency(faltante);
+
+                if (precioCorteGoal > 0) {
+                    const faltanteBruto = faltante / tuPorcentaje;
+                    const cortesFaltantes = Math.ceil(faltanteBruto / precioCorteGoal);
+                    cortesSpan.textContent = cortesFaltantes;
+                    cortesWrapper.classList.remove('hidden');
+                } else {
+                    cortesWrapper.classList.add('hidden');
+                }
+
+                let diasRestantesCalculo = diasTrabajoGoal - diasCargados;
+                if (diasRestantesCalculo <= 0) diasRestantesCalculo = 0;
+
+                if (diasRestantesCalculo > 0) {
+                    const faltanteBruto = faltante / tuPorcentaje; 
+                    const metaDiariaRestanteBruta = faltanteBruto / diasRestantesCalculo;
+                    const serviciosDiariosRestantes = Math.ceil(metaDiariaRestanteBruta / precioCorteGoal);
+                    
+                    promedioSpan.textContent = formatCurrency(metaDiariaRestanteBruta);
+                    if(promedioCortesSpan) promedioCortesSpan.textContent = serviciosDiariosRestantes;
+                    
+                    promedioWrapper.classList.remove('hidden');
+                } else {
+                    promedioWrapper.classList.add('hidden');
+                }
+
+            } else {
+                faltanteWrapper.classList.add('hidden');
+                exitoDiv.classList.remove('hidden');
+                const extra = gananciaLiquidaReal - metaLiquidaGoal;
+                document.getElementById('resExtra').textContent = formatCurrency(Math.max(0, extra));
+            }
+        }
+
+        // --- 6. EVENTOS ---
+        
+        document.getElementById('servicioSelector').addEventListener('change', function() {
+            const precio = this.value;
+            const input = document.getElementById('precioReferencia');
+            input.value = precio;
+            
+            // NUEVO: Capturar y guardar el nombre del servicio
+            const selectedOption = this.options[this.selectedIndex];
+            serviceName = selectedOption.getAttribute('data-name') || 'Cortes';
+            localStorage.setItem('serviceName', serviceName);
+            
+            input.dispatchEvent(new Event('input'));
+            
+            // Si ya hay una meta cargada, intentamos recalcular visualmente
+            if(document.getElementById('metaLiquida').value) {
+                performCalculation();
+            }
+        });
+
+        document.querySelectorAll('.save-input').forEach(input => {
+            input.addEventListener('input', saveData);
+        });
+
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const dayIndex = parseInt(this.getAttribute('data-day'));
+                if (selectedDays.includes(dayIndex)) {
+                    selectedDays = selectedDays.filter(d => d !== dayIndex);
+                } else {
+                    selectedDays.push(dayIndex);
+                }
+                saveSelectedDays();
+                updateDayButtonsVisuals();
+            });
+        });
+
+        document.getElementById('calcularBtn').addEventListener('click', function() {
+            if (selectedDays.length === 0) {
+                document.getElementById('error').classList.remove('hidden');
+                return;
+            }
+            performCalculation();
+            document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            if(!confirm("¿Empezar semana nueva? Se borrará la meta y los montos diarios.")) return;
+
+            localStorage.removeItem('metaLiquida');
+            const metaInput = document.getElementById('metaLiquida');
+            if(metaInput) metaInput.value = '';
+
+            daysNames.forEach(day => {
+                localStorage.removeItem(`dia_${day}`);
+            });
+            
+            const inputsDias = document.querySelectorAll('.dia-input');
+            inputsDias.forEach(input => input.value = '');
+
+            metaLiquidaGoal = 0;
+            
+            document.getElementById('resultado').classList.add('hidden');
+            document.getElementById('seguimiento').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+        });
+
+        document.getElementById('toggleGuia').addEventListener('change', function() {
+            const contenido = document.getElementById('contenidoGuia');
+            if (this.checked) {
+                contenido.style.maxHeight = contenido.scrollHeight + "px";
+            } else {
+                contenido.style.maxHeight = "0px";
+            }
+        });
+
+        // --- 7. INICIALIZACIÓN ---
+        loadAllData();
+
+    </script>
+</body>
+</html>
+
